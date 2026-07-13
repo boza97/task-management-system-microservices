@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -25,8 +26,16 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public List<UserResponse> listUsers() {
+    public List<UserResponse> listUsers(@RequestParam(required = false) List<UUID> ids) {
+        if (ids != null && !ids.isEmpty()) {
+            return userService.getUsersByIds(ids);
+        }
         return userService.getAllUsers();
+    }
+
+    @GetMapping("/{userId}")
+    public UserResponse getUser(@PathVariable UUID userId) {
+        return userService.getUser(userId);
     }
 
     @PostMapping("/register")
