@@ -1,6 +1,7 @@
 package com.bozidar.tms.user_service.user;
 
 import com.bozidar.tms.user_service.common.exception.EmailAlreadyExistsException;
+import com.bozidar.tms.user_service.common.exception.ResourceNotFoundException;
 import com.bozidar.tms.user_service.user.dto.UserRegistrationRequest;
 import com.bozidar.tms.user_service.user.dto.UserResponse;
 import jakarta.transaction.Transactional;
@@ -22,8 +23,16 @@ public class UserService {
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                             .map(user -> new UserResponse(user.getId(), user.getEmail(), user.getFirstName(),
-                                                           user.getLastName())).toList();
+                             .map(this::toResponse).toList();
+    }
+
+    public UserResponse getUser(UUID userId) {
+        return toResponse(findUser(userId));
+    }
+
+    public List<UserResponse> getUsersByIds(List<UUID> ids) {
+        return userRepository.findAllById(ids).stream()
+                             .map(this::toResponse).toList();
     }
 
     public void register(UserRegistrationRequest request) {
@@ -33,6 +42,10 @@ public class UserService {
 
         String hashedPassword = passwordEncoder.encode(request.password());
         User user = new User(request.firstName(), request.lastName(), request.email(), hashedPassword);
+
+        Role userRole = roleRepository.findByName("USER")
+                                      .orElseThrow(() -> new IllegalStateException("Default role USER not found"));
+        user.getRoles().add(userRole);
 
         userRepository.save(user);
     }
@@ -53,11 +66,15 @@ public class UserService {
 
     private User findUser(UUID userId) {
         return userRepository.findById(userId)
-                             .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private Role findRole(String roleName) {
         return roleRepository.findByName(roleName)
-                             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+                             .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+    }
+
+    private UserResponse toResponse(User user) {
+        return new UserResponse(user.getId(), user.getEmail(), user.getFirstName(), user.getLastName());
     }
 }
