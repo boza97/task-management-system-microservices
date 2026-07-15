@@ -1,0 +1,22 @@
+package com.bozidar.tms.project_service.project.membership;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface ProjectMembershipRepository extends JpaRepository<ProjectMembership, UUID> {
+
+    boolean existsByProjectIdAndUserId(UUID projectId, UUID userId);
+
+    boolean existsByProjectIdAndUserIdAndRole(UUID projectId, UUID userId, ProjectRole role);
+
+    Optional<ProjectMembership> findByProjectIdAndUserId(UUID projectId, UUID userId);
+
+    List<ProjectMembership> findAllByProjectId(UUID projectId);
+
+    void deleteByProjectIdAndUserId(UUID projectId, UUID userId);
+}
