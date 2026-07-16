@@ -13,6 +13,8 @@ public interface ProjectMembershipService {
 
     List<ProjectMemberResponse> listMembers(UUID projectId);
 
+    ProjectMemberResponse getMember(UUID projectId, UUID userId);
+
     ProjectMemberResponse changeRole(UUID projectId, UUID userId, ChangeMemberRoleRequest request);
 
     void removeMember(UUID projectId, UUID userId);

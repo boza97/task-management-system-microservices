@@ -38,6 +38,11 @@ public class ProjectMembershipController {
         return membershipService.listMembers(projectId);
     }
 
+    @GetMapping("/{userId}")
+    public ProjectMemberResponse getMember(@PathVariable UUID projectId, @PathVariable UUID userId) {
+        return membershipService.getMember(projectId, userId);
+    }
+
     @PatchMapping("/{userId}/role")
     public ProjectMemberResponse changeRole(@PathVariable UUID projectId,
                                             @PathVariable UUID userId,
