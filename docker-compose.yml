@@ -10,6 +10,11 @@ services:
       - "5433:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d user_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   project-db:
     image: postgres:16
@@ -22,7 +27,55 @@ services:
       - "5434:5432"
     volumes:
       - project_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  task-db:
+    image: postgres:16
+    container_name: task-db
+    environment:
+      POSTGRES_DB: task_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - task_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d task_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/user_db
+    ports:
+      - "8081:8081"
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  project-service:
+    build: ./project-service
+    container_name: project-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://project-db:5432/project_db
+      USER_SERVICE_URL: http://user-service:8081
+    ports:
+      - "8082:8082"
+    depends_on:
+      project-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
 
 volumes:
   user_db_data:
   project_db_data:
+  task_db_data:

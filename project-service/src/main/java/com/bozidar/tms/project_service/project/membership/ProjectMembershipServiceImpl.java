@@ -72,6 +72,19 @@ public class ProjectMembershipServiceImpl implements ProjectMembershipService {
     }
 
     @Override
+    public ProjectMemberResponse getMember(UUID projectId, UUID userId) {
+        getProjectOrThrow(projectId);
+
+        ProjectMembership membership = membershipRepository.findByProjectIdAndUserId(projectId, userId)
+                                                           .orElseThrow(() -> new ResourceNotFoundException(
+                                                                   "Membership not found"));
+
+        UserResponse user = userClient.getUser(userId).orElse(null);
+
+        return mapToResponse(membership, user);
+    }
+
+    @Override
     public ProjectMemberResponse changeRole(UUID projectId, UUID userId, ChangeMemberRoleRequest request) {
         Project project = getProjectOrThrow(projectId);
         CurrentUser currentUser = currentUserProvider.getCurrentUser();
