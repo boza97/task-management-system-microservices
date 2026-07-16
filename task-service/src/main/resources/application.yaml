@@ -1,0 +1,35 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: task-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5435/task_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:#@!#assaD!@@#!@$SAD@$!%@!%@Ss$#!@$@$FASFQ@QFSAFASF_CHANGE_ME}
+
+services:
+  user-service:
+    url: ${USER_SERVICE_URL:http://localhost:8081}
+  project-service:
+    url: ${PROJECT_SERVICE_URL:http://localhost:8082}
