@@ -50,6 +50,23 @@ services:
       timeout: 3s
       retries: 10
 
+  notification-db:
+    image: postgres:16
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notification_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   kafka:
     image: apache/kafka:4.0.0
     container_name: kafka
@@ -105,4 +122,5 @@ volumes:
   user_db_data:
   project_db_data:
   task_db_data:
+  notification_db_data:
   kafka_data:
