@@ -3,6 +3,9 @@ package com.bozidar.tms.task_service.task.comment;
 import com.bozidar.tms.task_service.client.UserClient;
 import com.bozidar.tms.task_service.client.dto.UserResponse;
 import com.bozidar.tms.task_service.common.exception.ResourceNotFoundException;
+import com.bozidar.tms.task_service.event.TaskEvent;
+import com.bozidar.tms.task_service.event.TaskEventPublisher;
+import com.bozidar.tms.task_service.event.TaskEventType;
 import com.bozidar.tms.task_service.security.CurrentUser;
 import com.bozidar.tms.task_service.security.CurrentUserProvider;
 import com.bozidar.tms.task_service.task.Task;
@@ -29,6 +32,7 @@ public class CommentServiceImpl implements CommentService {
     private final TaskRepository taskRepository;
     private final CurrentUserProvider currentUserProvider;
     private final UserClient userClient;
+    private final TaskEventPublisher eventPublisher;
 
     @Override
     public CommentResponse addComment(UUID taskId, CommentCreateRequest request) {
@@ -48,7 +52,17 @@ public class CommentServiceImpl implements CommentService {
 
         comment = commentRepository.save(comment);
 
-        // TODO(events): objaviti COMMENT_ADDED dogadjaj (audit-service)
+        eventPublisher.publish(TaskEvent.of(
+                TaskEventType.COMMENT_ADDED,
+                task.getId(),
+                task.getProjectId(),
+                task.getTitle(),
+                null,
+                comment.getContent(),
+                currentUser.id(),
+                currentUser.fullName(),
+                task.getAssigneeId()
+        ));
 
         return new CommentResponse(
                 comment.getId(),
@@ -109,7 +123,18 @@ public class CommentServiceImpl implements CommentService {
             throw new AccessDeniedException("Only comment author or admin can delete comment");
         }
 
-        // TODO(events): objaviti COMMENT_DELETED dogadjaj (audit-service)
+        Task task = comment.getTask();
+        eventPublisher.publish(TaskEvent.of(
+                TaskEventType.COMMENT_DELETED,
+                task.getId(),
+                task.getProjectId(),
+                task.getTitle(),
+                comment.getContent(),
+                null,
+                currentUser.id(),
+                currentUser.fullName(),
+                task.getAssigneeId()
+        ));
 
         commentRepository.delete(comment);
     }
