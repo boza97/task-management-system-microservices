@@ -4,6 +4,9 @@ import com.bozidar.tms.task_service.client.ProjectClient;
 import com.bozidar.tms.task_service.client.UserClient;
 import com.bozidar.tms.task_service.client.dto.UserResponse;
 import com.bozidar.tms.task_service.common.exception.ResourceNotFoundException;
+import com.bozidar.tms.task_service.event.TaskEvent;
+import com.bozidar.tms.task_service.event.TaskEventPublisher;
+import com.bozidar.tms.task_service.event.TaskEventType;
 import com.bozidar.tms.task_service.security.CurrentUser;
 import com.bozidar.tms.task_service.security.CurrentUserProvider;
 import com.bozidar.tms.task_service.task.dto.ChangeAssigneeRequest;
@@ -40,6 +43,7 @@ public class TaskServiceImpl implements TaskService {
     private final CurrentUserProvider currentUserProvider;
     private final ProjectClient projectClient;
     private final UserClient userClient;
+    private final TaskEventPublisher eventPublisher;
 
     @Override
     public TaskResponse create(TaskCreateRequest request) {
@@ -69,7 +73,7 @@ public class TaskServiceImpl implements TaskService {
 
         task = taskRepository.save(task);
 
-        // TODO(events): objaviti TaskCreated dogadjaj (audit-service, notification-service)
+        eventPublisher.publish(taskEvent(TaskEventType.TASK_CREATED, task, currentUser, null, task.getTitle()));
 
         return mapToResponse(task);
     }
@@ -124,14 +128,31 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskResponse update(UUID taskId, TaskUpdateRequest request) {
         Task task = getTaskOrThrow(taskId);
+        CurrentUser currentUser = currentUserProvider.getCurrentUser();
 
-        // TODO(events): za svaku izmenu objaviti odgovarajuci dogadjaj
-        //  (TITLE_CHANGED, DESCRIPTION_CHANGED, DUE_DATE_CHANGED, PRIORITY_CHANGED)
+        if (!request.title().equals(task.getTitle())) {
+            eventPublisher.publish(taskEvent(TaskEventType.TITLE_CHANGED, task, currentUser,
+                                             task.getTitle(), request.title()));
+            task.setTitle(request.title());
+        }
 
-        task.setTitle(request.title());
-        task.setDescription(request.description());
-        task.setDueDate(request.dueDate());
-        task.setPriority(request.priority());
+        if (!Objects.equals(request.description(), task.getDescription())) {
+            eventPublisher.publish(taskEvent(TaskEventType.DESCRIPTION_CHANGED, task, currentUser,
+                                             task.getDescription(), request.description()));
+            task.setDescription(request.description());
+        }
+
+        if (!Objects.equals(request.dueDate(), task.getDueDate())) {
+            eventPublisher.publish(taskEvent(TaskEventType.DUE_DATE_CHANGED, task, currentUser,
+                                             String.valueOf(task.getDueDate()), String.valueOf(request.dueDate())));
+            task.setDueDate(request.dueDate());
+        }
+
+        if (request.priority() != task.getPriority()) {
+            eventPublisher.publish(taskEvent(TaskEventType.PRIORITY_CHANGED, task, currentUser,
+                                             String.valueOf(task.getPriority()), String.valueOf(request.priority())));
+            task.setPriority(request.priority());
+        }
 
         return mapToResponse(task);
     }
@@ -139,6 +160,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskResponse changeStatus(UUID taskId, ChangeStatusRequest request) {
         Task task = getTaskOrThrow(taskId);
+        CurrentUser currentUser = currentUserProvider.getCurrentUser();
 
         TaskStatus newStatus = taskStatusRepository.findByCode(request.statusCode())
                                                    .orElseThrow(
@@ -148,7 +170,7 @@ public class TaskServiceImpl implements TaskService {
         String newCode = newStatus.getCode();
 
         if (!oldCode.equals(newCode)) {
-            // TODO(events): objaviti STATUS_CHANGED dogadjaj
+            eventPublisher.publish(taskEvent(TaskEventType.STATUS_CHANGED, task, currentUser, oldCode, newCode));
             task.setStatus(newStatus);
         }
 
@@ -158,6 +180,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskResponse changeAssignee(UUID taskId, ChangeAssigneeRequest request) {
         Task task = getTaskOrThrow(taskId);
+        CurrentUser currentUser = currentUserProvider.getCurrentUser();
 
         UUID oldAssigneeId = task.getAssigneeId();
         UUID newAssigneeId = request.assigneeId();
@@ -166,14 +189,27 @@ public class TaskServiceImpl implements TaskService {
             return mapToResponse(task);
         }
 
+        Set<UUID> assigneeIds = new HashSet<>();
+        if (oldAssigneeId != null) {
+            assigneeIds.add(oldAssigneeId);
+        }
         if (newAssigneeId != null) {
-            userClient.getUser(newAssigneeId)
-                      .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
+            assigneeIds.add(newAssigneeId);
         }
 
-        // TODO(events): objaviti ASSIGNEE_CHANGED / TaskAssigned dogadjaj
+        Map<UUID, UserResponse> assignees = userClient.getUsersMappedByIds(assigneeIds);
+
+        if (newAssigneeId != null && !assignees.containsKey(newAssigneeId)) {
+            throw new ResourceNotFoundException("Assignee not found");
+        }
+
+        String from = oldAssigneeId == null ? "Unassigned"
+                : assignees.containsKey(oldAssigneeId) ? assignees.get(oldAssigneeId).fullName() : "Unknown";
+        String to = newAssigneeId == null ? "Unassigned" : assignees.get(newAssigneeId).fullName();
 
         task.setAssigneeId(newAssigneeId);
+
+        eventPublisher.publish(taskEvent(TaskEventType.ASSIGNEE_CHANGED, task, currentUser, from, to));
 
         return mapToResponse(task);
     }
@@ -185,7 +221,7 @@ public class TaskServiceImpl implements TaskService {
 
         requireDeletePermission(task, currentUser);
 
-        // TODO(events): objaviti TaskDeleted dogadjaj
+        eventPublisher.publish(taskEvent(TaskEventType.TASK_DELETED, task, currentUser, task.getTitle(), null));
 
         taskRepository.delete(task);
     }
@@ -193,6 +229,21 @@ public class TaskServiceImpl implements TaskService {
     private Task getTaskOrThrow(UUID taskId) {
         return taskRepository.findById(taskId)
                              .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+    }
+
+    private TaskEvent taskEvent(TaskEventType type, Task task, CurrentUser actor,
+                                String oldValue, String newValue) {
+        return TaskEvent.of(
+                type,
+                task.getId(),
+                task.getProjectId(),
+                task.getTitle(),
+                oldValue,
+                newValue,
+                actor.id(),
+                actor.fullName(),
+                task.getAssigneeId()
+        );
     }
 
     private void requireDeletePermission(Task task, CurrentUser user) {
