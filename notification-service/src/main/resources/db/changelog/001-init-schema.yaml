@@ -1,0 +1,66 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 000-enable-uuid-extension
+      author: bozidar
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            stripComments: true
+            sql: |
+              CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+  - changeSet:
+      id: 001-create-notifications
+      author: bozidar
+      changes:
+        - createTable:
+            tableName: notifications
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: recipient_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: task_id
+                  type: uuid
+              - column:
+                  name: project_id
+                  type: uuid
+              - column:
+                  name: is_read
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: notifications
+            indexName: idx_notifications_recipient_id
+            columns:
+              - column:
+                  name: recipient_id
