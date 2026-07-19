@@ -67,6 +67,23 @@ services:
       timeout: 3s
       retries: 10
 
+  audit-db:
+    image: postgres:16
+    container_name: audit-db
+    environment:
+      POSTGRES_DB: audit_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - audit_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d audit_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   kafka:
     image: apache/kafka:4.0.0
     container_name: kafka
@@ -118,9 +135,58 @@ services:
       user-service:
         condition: service_started
 
+  task-service:
+    build: ./task-service
+    container_name: task-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://task-db:5432/task_db
+      USER_SERVICE_URL: http://user-service:8081
+      PROJECT_SERVICE_URL: http://project-service:8082
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    ports:
+      - "8083:8083"
+    depends_on:
+      task-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      project-service:
+        condition: service_started
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notification_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    ports:
+      - "8084:8084"
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  audit-service:
+    build: ./audit-service
+    container_name: audit-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://audit-db:5432/audit_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    ports:
+      - "8085:8085"
+    depends_on:
+      audit-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
 volumes:
   user_db_data:
   project_db_data:
   task_db_data:
   notification_db_data:
+  audit_db_data:
   kafka_data:

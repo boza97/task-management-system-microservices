@@ -1,4 +1,4 @@
-package com.bozidar.tms.notification_service.event;
+package com.bozidar.tms.audit_service.event;
 
 public enum TaskEventType {
     TASK_CREATED,
