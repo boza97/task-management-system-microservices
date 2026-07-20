@@ -49,8 +49,9 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponse create(TaskCreateRequest request) {
         CurrentUser currentUser = currentUserProvider.getCurrentUser();
 
-        projectClient.getProject(request.projectId())
-                     .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        if (!projectClient.isMember(request.projectId(), currentUser.id())) {
+            throw new AccessDeniedException("Only project members can create tasks");
+        }
 
         TaskStatus defaultStatus = taskStatusRepository.findByCode("TODO")
                                                        .orElseThrow(() -> new IllegalStateException(
@@ -66,9 +67,10 @@ public class TaskServiceImpl implements TaskService {
         task.setCreatedById(currentUser.id());
 
         if (request.assigneeId() != null) {
-            UserResponse assignee = userClient.getUser(request.assigneeId())
-                                              .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
-            task.setAssigneeId(assignee.id());
+            if (!projectClient.isMember(request.projectId(), request.assigneeId())) {
+                throw new IllegalArgumentException("Assignee must be a project member");
+            }
+            task.setAssigneeId(request.assigneeId());
         }
 
         task = taskRepository.save(task);
@@ -189,6 +191,10 @@ public class TaskServiceImpl implements TaskService {
             return mapToResponse(task);
         }
 
+        if (newAssigneeId != null && !projectClient.isMember(task.getProjectId(), newAssigneeId)) {
+            throw new IllegalArgumentException("Assignee must be a project member");
+        }
+
         Set<UUID> assigneeIds = new HashSet<>();
         if (oldAssigneeId != null) {
             assigneeIds.add(oldAssigneeId);
@@ -198,10 +204,6 @@ public class TaskServiceImpl implements TaskService {
         }
 
         Map<UUID, UserResponse> assignees = userClient.getUsersMappedByIds(assigneeIds);
-
-        if (newAssigneeId != null && !assignees.containsKey(newAssigneeId)) {
-            throw new ResourceNotFoundException("Assignee not found");
-        }
 
         String from = oldAssigneeId == null ? "Unassigned"
                 : assignees.containsKey(oldAssigneeId) ? assignees.get(oldAssigneeId).fullName() : "Unknown";
