@@ -183,6 +183,29 @@ services:
       kafka:
         condition: service_healthy
 
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    environment:
+      USER_SERVICE_URL: http://user-service:8081
+      PROJECT_SERVICE_URL: http://project-service:8082
+      TASK_SERVICE_URL: http://task-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      AUDIT_SERVICE_URL: http://audit-service:8085
+    ports:
+      - "8080:8080"
+    depends_on:
+      user-service:
+        condition: service_started
+      project-service:
+        condition: service_started
+      task-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      audit-service:
+        condition: service_started
+
 volumes:
   user_db_data:
   project_db_data:
