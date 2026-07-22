@@ -127,6 +127,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://project-db:5432/project_db
       USER_SERVICE_URL: http://user-service:8081
+      TASK_SERVICE_URL: http://task-service:8083
     ports:
       - "8082:8082"
     depends_on:

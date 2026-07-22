@@ -91,6 +91,11 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public boolean existsByProjectAndAssignee(UUID projectId, UUID assigneeId) {
+        return taskRepository.existsByProjectIdAndAssigneeId(projectId, assigneeId);
+    }
+
+    @Override
     public List<TaskResponse> search(UUID projectId, TaskSearchCriteria criteria) {
         if (noFilters(criteria)) {
             return getByProject(projectId);

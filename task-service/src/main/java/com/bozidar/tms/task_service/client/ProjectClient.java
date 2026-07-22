@@ -2,6 +2,7 @@ package com.bozidar.tms.task_service.client;
 
 import com.bozidar.tms.task_service.client.dto.ProjectMemberResponse;
 import com.bozidar.tms.task_service.client.dto.ProjectResponse;
+import com.bozidar.tms.task_service.config.ResilienceExecutor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -16,10 +17,15 @@ import java.util.UUID;
 @Component
 public class ProjectClient {
 
+    private static final String CB_NAME = "project-service";
+
     private final RestClient restClient;
+    private final ResilienceExecutor resilience;
 
     public ProjectClient(RestClient.Builder builder,
+                         ResilienceExecutor resilience,
                          @Value("${services.project-service.url}") String projectServiceUrl) {
+        this.resilience = resilience;
         this.restClient = builder
                 .baseUrl(projectServiceUrl)
                 .requestInterceptor((request, body, execution) -> {
@@ -32,10 +38,11 @@ public class ProjectClient {
     public Optional<ProjectResponse> getProject(UUID projectId) {
         try {
             return Optional.ofNullable(
-                    restClient.get()
-                              .uri("/api/projects/{id}", projectId)
-                              .retrieve()
-                              .body(ProjectResponse.class));
+                    resilience.execute(CB_NAME, () ->
+                            restClient.get()
+                                      .uri("/api/projects/{id}", projectId)
+                                      .retrieve()
+                                      .body(ProjectResponse.class)));
         } catch (HttpClientErrorException.NotFound e) {
             return Optional.empty();
         }
@@ -44,10 +51,11 @@ public class ProjectClient {
     public Optional<ProjectMemberResponse> getMembership(UUID projectId, UUID userId) {
         try {
             return Optional.ofNullable(
-                    restClient.get()
-                              .uri("/api/projects/{projectId}/members/{userId}", projectId, userId)
-                              .retrieve()
-                              .body(ProjectMemberResponse.class));
+                    resilience.execute(CB_NAME, () ->
+                            restClient.get()
+                                      .uri("/api/projects/{projectId}/members/{userId}", projectId, userId)
+                                      .retrieve()
+                                      .body(ProjectMemberResponse.class)));
         } catch (HttpClientErrorException.NotFound e) {
             return Optional.empty();
         }
