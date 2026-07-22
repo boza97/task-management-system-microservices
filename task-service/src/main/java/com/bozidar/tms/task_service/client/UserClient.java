@@ -1,6 +1,7 @@
 package com.bozidar.tms.task_service.client;
 
 import com.bozidar.tms.task_service.client.dto.UserResponse;
+import com.bozidar.tms.task_service.config.ResilienceExecutor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -21,10 +22,15 @@ import java.util.stream.Collectors;
 @Component
 public class UserClient {
 
+    private static final String CB_NAME = "user-service";
+
     private final RestClient restClient;
+    private final ResilienceExecutor resilience;
 
     public UserClient(RestClient.Builder builder,
+                      ResilienceExecutor resilience,
                       @Value("${services.user-service.url}") String userServiceUrl) {
+        this.resilience = resilience;
         this.restClient = builder
                 .baseUrl(userServiceUrl)
                 .requestInterceptor((request, body, execution) -> {
@@ -37,10 +43,11 @@ public class UserClient {
     public Optional<UserResponse> getUser(UUID userId) {
         try {
             return Optional.ofNullable(
-                    restClient.get()
-                              .uri("/api/users/{id}", userId)
-                              .retrieve()
-                              .body(UserResponse.class));
+                    resilience.execute(CB_NAME, () ->
+                            restClient.get()
+                                      .uri("/api/users/{id}", userId)
+                                      .retrieve()
+                                      .body(UserResponse.class)));
         } catch (HttpClientErrorException.NotFound e) {
             return Optional.empty();
         }
@@ -55,13 +62,14 @@ public class UserClient {
                             .map(UUID::toString)
                             .collect(Collectors.joining(","));
 
-        List<UserResponse> users = restClient.get()
-                                             .uri(uriBuilder -> uriBuilder.path("/api/users")
-                                                                          .queryParam("ids", ids)
-                                                                          .build())
-                                             .retrieve()
-                                             .body(new ParameterizedTypeReference<>() {
-                                             });
+        List<UserResponse> users = resilience.execute(CB_NAME, () ->
+                restClient.get()
+                          .uri(uriBuilder -> uriBuilder.path("/api/users")
+                                                       .queryParam("ids", ids)
+                                                       .build())
+                          .retrieve()
+                          .body(new ParameterizedTypeReference<>() {
+                          }));
 
         return users != null ? users : List.of();
     }

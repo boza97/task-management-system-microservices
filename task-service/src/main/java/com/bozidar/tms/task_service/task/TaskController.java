@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -63,6 +64,13 @@ public class TaskController {
     @GetMapping("/{id}")
     public TaskResponse getById(@PathVariable UUID id) {
         return taskService.getById(id);
+    }
+
+    @Operation(summary = "Check assignee has tasks in project",
+            description = "Returns true if the given user has any task assigned within the given project")
+    @GetMapping("/assignments/exists")
+    public boolean existsByProjectAndAssignee(@RequestParam UUID projectId, @RequestParam UUID assigneeId) {
+        return taskService.existsByProjectAndAssignee(projectId, assigneeId);
     }
 
 

@@ -31,3 +31,5 @@ security:
 services:
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8081}
+  task-service:
+    url: ${TASK_SERVICE_URL:http://localhost:8083}

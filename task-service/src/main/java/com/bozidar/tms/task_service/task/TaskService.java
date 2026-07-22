@@ -17,6 +17,8 @@ public interface TaskService {
 
     List<TaskResponse> getByProject(UUID projectId);
 
+    boolean existsByProjectAndAssignee(UUID projectId, UUID assigneeId);
+
     List<TaskResponse> search(UUID projectId, TaskSearchCriteria criteria);
 
     TaskResponse update(UUID taskId, TaskUpdateRequest request);

@@ -1,7 +1,9 @@
 package com.bozidar.tms.project_service.project.membership;
 
+import com.bozidar.tms.project_service.client.TaskClient;
 import com.bozidar.tms.project_service.client.UserClient;
 import com.bozidar.tms.project_service.client.dto.UserResponse;
+import com.bozidar.tms.project_service.common.exception.MemberHasAssignedTasksException;
 import com.bozidar.tms.project_service.common.exception.ResourceNotFoundException;
 import com.bozidar.tms.project_service.project.Project;
 import com.bozidar.tms.project_service.project.ProjectRepository;
@@ -30,6 +32,7 @@ public class ProjectMembershipServiceImpl implements ProjectMembershipService {
     private final ProjectRepository projectRepository;
     private final CurrentUserProvider currentUserProvider;
     private final UserClient userClient;
+    private final TaskClient taskClient;
 
     @Override
     public ProjectMemberResponse addMember(UUID projectId, AddMemberRequest request) {
@@ -114,12 +117,12 @@ public class ProjectMembershipServiceImpl implements ProjectMembershipService {
             throw new AccessDeniedException("Not allowed to remove members");
         }
 
-        // TODO(task-service): kada task-service bude gotov, pozvati ga i proveriti
-        //  da li clan ima dodeljene zadatke na projektu; ako ima, baciti
-        //  MemberHasAssignedTasksException (u monolitu: taskRepository.existsByProjectIdAndAssigneeId)
-
         if (project.isOwner(userId)) {
             throw new IllegalArgumentException("Cannot remove project owner");
+        }
+
+        if (taskClient.hasAssignedTasks(projectId, userId)) {
+            throw new MemberHasAssignedTasksException("Cannot remove member because they are assigned to tasks");
         }
 
         membershipRepository.deleteByProjectIdAndUserId(projectId, userId);
