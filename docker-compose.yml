@@ -112,6 +112,7 @@ services:
 
   user-service:
     build: ./user-service
+    image: tms/user-service:latest
     container_name: user-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/user_db
@@ -123,6 +124,7 @@ services:
 
   project-service:
     build: ./project-service
+    image: tms/project-service:latest
     container_name: project-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://project-db:5432/project_db
@@ -138,6 +140,7 @@ services:
 
   task-service:
     build: ./task-service
+    image: tms/task-service:latest
     container_name: task-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://task-db:5432/task_db
@@ -158,6 +161,7 @@ services:
 
   notification-service:
     build: ./notification-service
+    image: tms/notification-service:latest
     container_name: notification-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notification_db
@@ -172,6 +176,7 @@ services:
 
   audit-service:
     build: ./audit-service
+    image: tms/audit-service:latest
     container_name: audit-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://audit-db:5432/audit_db
@@ -186,6 +191,7 @@ services:
 
   api-gateway:
     build: ./api-gateway
+    image: tms/api-gateway:latest
     container_name: api-gateway
     environment:
       USER_SERVICE_URL: http://user-service:8081
