@@ -31,7 +31,8 @@ public class ResilienceExecutor {
         RetryConfig retryConfig = RetryConfig.custom()
                                              .maxAttempts(3)
                                              .intervalFunction(
-                                                     IntervalFunction.ofExponentialBackoff(Duration.ofMillis(200), 2.0))
+                                                     IntervalFunction.ofExponentialBackoff(
+                                                             Duration.ofMillis(200), 2.0, Duration.ofSeconds(5)))
                                              .ignoreExceptions(HttpClientErrorException.class)
                                              .build();
         this.retryRegistry = RetryRegistry.of(retryConfig);
