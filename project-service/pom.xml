@@ -106,6 +106,12 @@
             <artifactId>resilience4j-circuitbreaker</artifactId>
             <version>2.4.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.dapr</groupId>
+            <artifactId>dapr-sdk</artifactId>
+            <version>1.18.1</version>
+        </dependency>
     </dependencies>
 
     <build>
