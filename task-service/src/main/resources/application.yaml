@@ -37,8 +37,14 @@ security:
 services:
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8081}
+    app-id: ${USER_SERVICE_APP_ID:user-service}
   project-service:
     url: ${PROJECT_SERVICE_URL:http://localhost:8082}
+    app-id: ${PROJECT_SERVICE_APP_ID:project-service}
+
+dapr:
+  pubsub:
+    name: ${DAPR_PUBSUB_NAME:task-pubsub}
 
 app:
   kafka:

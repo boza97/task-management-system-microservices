@@ -31,5 +31,7 @@ security:
 services:
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8081}
+    app-id: ${USER_SERVICE_APP_ID:user-service}
   task-service:
     url: ${TASK_SERVICE_URL:http://localhost:8083}
+    app-id: ${TASK_SERVICE_APP_ID:task-service}
