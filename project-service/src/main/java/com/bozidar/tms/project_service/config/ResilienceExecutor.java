@@ -1,5 +1,6 @@
 package com.bozidar.tms.project_service.config;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -21,19 +22,22 @@ public class ResilienceExecutor {
 
     public ResilienceExecutor() {
         CircuitBreakerConfig cbConfig = CircuitBreakerConfig.custom()
-                                                            .slidingWindowSize(10)
-                                                            .failureRateThreshold(50)
+                                                            .slidingWindowSize(6)
+                                                            .minimumNumberOfCalls(6)
+                                                            .failureRateThreshold(100)
                                                             .waitDurationInOpenState(Duration.ofSeconds(10))
+                                                            .permittedNumberOfCallsInHalfOpenState(1)
                                                             .ignoreExceptions(HttpClientErrorException.class)
                                                             .build();
         this.circuitBreakerRegistry = CircuitBreakerRegistry.of(cbConfig);
 
         RetryConfig retryConfig = RetryConfig.custom()
-                                             .maxAttempts(3)
+                                             .maxAttempts(4)
                                              .intervalFunction(
                                                      IntervalFunction.ofExponentialBackoff(
                                                              Duration.ofMillis(200), 2.0, Duration.ofSeconds(5)))
-                                             .ignoreExceptions(HttpClientErrorException.class)
+                                             .ignoreExceptions(HttpClientErrorException.class,
+                                                               CallNotPermittedException.class)
                                              .build();
         this.retryRegistry = RetryRegistry.of(retryConfig);
     }
